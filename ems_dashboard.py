@@ -2,6 +2,7 @@
 import os
 import datetime as dt
 import textwrap
+from zoneinfo import ZoneInfo
 
 import numpy as np
 import pandas as pd
@@ -27,7 +28,9 @@ MONATE = {
     9: "September", 10: "Oktober", 11: "November", 12: "Dezember"
 }
 
-JETZT = dt.datetime.now()
+# Lokale Zeit für Deutschland inklusive automatischer Sommer-/Winterzeit
+DEUTSCHE_ZEITZONE = ZoneInfo("Europe/Berlin")
+JETZT = dt.datetime.now(DEUTSCHE_ZEITZONE)
 HEUTE = JETZT.date()
 
 # Version des festen PV-Startprofils.
