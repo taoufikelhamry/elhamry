@@ -1297,8 +1297,12 @@ if st.session_state.ansicht == "📆 Heute":
     labels = zeitachse_erstellen(start_datum_real, uhrzeit_slot, n_slots)
     zeitpunkte_dt = zeitpunkte_erstellen(start_datum_real, uhrzeit_slot, n_slots)
 
-    fokus_start = 288
-    fokus_ende = 288 + 95
+    # In der Ansicht „Heute“ nur den heutigen Kalendertag auswerten:
+    # 00:00 Uhr bis zum aktuell begonnenen 15-Minuten-Slot.
+    # Index 288 entspricht heute zur aktuellen Uhrzeit, weil die Zeitachse
+    # drei Tage vorher zur gleichen Uhrzeit startet.
+    fokus_start = max(0, 288 - uhrzeit_slot)
+    fokus_ende = 288
 
     ansicht_titel = f"Heute – {HEUTE.strftime('%d.%m.%Y')}"
 
@@ -1888,6 +1892,12 @@ speicher_entladen_sum = float(speicher_entladen[sicht].sum())
 netz_sum = float(netz_mit_auto[sicht].sum())
 haus_netz_sum = float(haus_netzbezug[sicht].sum())
 einspeisung_sum = float(einspeisung_nach_auto[sicht].sum())
+
+# Sehr kleine numerische Rundungsreste nicht als Netzbezug anzeigen.
+if abs(netz_sum) < 0.05:
+    netz_sum = 0.0
+if abs(haus_netz_sum) < 0.05:
+    haus_netz_sum = 0.0
 
 # -------------------------------------------------------------------------
 # AKTUELLE LEISTUNGSFLÜSSE FÜR DIE PFEILE
