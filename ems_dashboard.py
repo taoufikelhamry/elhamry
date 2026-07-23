@@ -1297,12 +1297,8 @@ if st.session_state.ansicht == "📆 Heute":
     labels = zeitachse_erstellen(start_datum_real, uhrzeit_slot, n_slots)
     zeitpunkte_dt = zeitpunkte_erstellen(start_datum_real, uhrzeit_slot, n_slots)
 
-    # In der Ansicht „Heute“ nur den heutigen Kalendertag auswerten:
-    # 00:00 Uhr bis zum aktuell begonnenen 15-Minuten-Slot.
-    # Index 288 entspricht heute zur aktuellen Uhrzeit, weil die Zeitachse
-    # drei Tage vorher zur gleichen Uhrzeit startet.
-    fokus_start = max(0, 288 - uhrzeit_slot)
-    fokus_ende = 288
+    fokus_start = 288
+    fokus_ende = 288 + 95
 
     ansicht_titel = f"Heute – {HEUTE.strftime('%d.%m.%Y')}"
 
@@ -1893,12 +1889,6 @@ netz_sum = float(netz_mit_auto[sicht].sum())
 haus_netz_sum = float(haus_netzbezug[sicht].sum())
 einspeisung_sum = float(einspeisung_nach_auto[sicht].sum())
 
-# Sehr kleine numerische Rundungsreste nicht als Netzbezug anzeigen.
-if abs(netz_sum) < 0.05:
-    netz_sum = 0.0
-if abs(haus_netz_sum) < 0.05:
-    haus_netz_sum = 0.0
-
 # -------------------------------------------------------------------------
 # AKTUELLE LEISTUNGSFLÜSSE FÜR DIE PFEILE
 # -------------------------------------------------------------------------
@@ -1906,7 +1896,7 @@ if abs(haus_netz_sum) < 0.05:
 # Die Pfeile im Energiefluss zeigen aber nur, was im aktuellen 15-Minuten-Slot
 # wirklich fließt. Wenn in diesem Slot kein Fluss vorhanden ist, wird kein Pfeil
 # gezeichnet. Das verhindert unlogische Pfeile nur wegen Tages-/Monatssummen.
-idx_flow = int(min(max(fokus_ende, 0), n_slots - 1))
+idx_flow = int(min(max(fokus_start, 0), n_slots - 1))
 
 pv_slot = float(max(0.0, pv_z[idx_flow]))
 haus_slot = float(max(0.0, verbrauch_z[idx_flow]))
@@ -1916,7 +1906,6 @@ pv_akku_slot = float(max(0.0, speicher_laden[idx_flow]))
 akku_haus_slot = float(max(0.0, speicher_entladen[idx_flow]))
 pv_auto_slot = float(max(0.0, auto_pv[idx_flow]))
 netz_auto_slot = float(max(0.0, auto_netz[idx_flow]))
-netz_haus_slot = float(max(0.0, haus_netzbezug[idx_flow]))
 pv_netz_slot = float(max(0.0, einspeisung_nach_auto[idx_flow]))
 
 # Umrechnung: kWh pro 15 Minuten × 4 = durchschnittliche kW-Leistung in diesem Slot
@@ -1925,7 +1914,6 @@ pv_akku_kw = pv_akku_slot * 4.0
 akku_haus_kw = akku_haus_slot * 4.0
 pv_auto_kw = pv_auto_slot * 4.0
 netz_auto_kw = netz_auto_slot * 4.0
-netz_haus_kw = netz_haus_slot * 4.0
 pv_netz_kw = pv_netz_slot * 4.0
 
 # Aktueller Zustand des Hausspeichers im gleichen Zeitpunkt wie die Pfeile
@@ -2316,7 +2304,7 @@ def render_energy_html():
         <div class="energy-sub">
             Zeitraum: <b>{ansicht_titel}</b> · Ankunft: <b>{ankunft_text}</b>{(" · gewünschte Abfahrt: <b>" + abfahrt_text + "</b>") if st.session_state.lade_modus == "🧠 Smart" else ""}<br>
             Strategie: <b>{sim["strategie"]}</b><br>
-            Farbige Pfeile zeigen den aktuellen Leistungsfluss. Bei 0,0 kW wird der Pfeil vollständig ausgeblendet.
+            Farbige Pfeile zeigen Energiefluss im gewählten Zeitraum. Graue Pfeile bedeuten: in dieser Richtung gab es keinen Energiefluss.
         </div>
 
         <div id="view-overview" class="box-view active">
@@ -2331,13 +2319,13 @@ def render_energy_html():
                         <marker id="arrowOrange" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#ff9f43"/></marker>
                     </defs>
 
-                    <path class="{active(pv_haus_kw)} pv-flow" d="M450 103 C450 145,450 174,450 212" marker-end="url(#arrowYellow)" />
-                    <path class="{active(pv_akku_kw)} battery-flow" d="M420 98 C330 130,245 154,150 202" marker-end="url(#arrowGreen)" />
-                    <path class="{active(akku_haus_kw)} battery-flow" d="M185 235 C280 258,350 260,430 240" marker-end="url(#arrowGreen)" />
-                    <path class="{active(pv_auto_kw)} car-flow" d="M480 98 C570 130,655 168,755 212" marker-end="url(#arrowTeal)" />
-                    <path class="{active(netz_auto_kw)} grid-flow" d="M760 100 C722 138,718 174,750 212" marker-end="url(#arrowBlue)" />
-                    <path class="{active(netz_haus_kw)} grid-house-flow" d="M805 108 C735 165,635 205,520 230" marker-end="url(#arrowRed)" />
-                    <path class="{active(pv_netz_kw)} feed-flow" d="M520 73 C650 48,735 48,815 73" marker-end="url(#arrowOrange)" />
+                    <path class="{active(pv_haus_flow)} pv-flow" d="M450 103 C450 145,450 174,450 212" marker-end="url(#arrowYellow)" />
+                    <path class="{active(pv_akku_flow)} battery-flow" d="M420 98 C330 130,245 154,150 202" marker-end="url(#arrowGreen)" />
+                    <path class="{active(akku_haus_flow)} battery-flow" d="M185 235 C280 258,350 260,430 240" marker-end="url(#arrowGreen)" />
+                    <path class="{active(pv_auto_flow)} car-flow" d="M480 98 C570 130,655 168,755 212" marker-end="url(#arrowTeal)" />
+                    <path class="{active(netz_auto_flow)} grid-flow" d="M760 100 C722 138,718 174,750 212" marker-end="url(#arrowBlue)" />
+                    <path class="{active(netz_haus_flow)} grid-house-flow" d="M805 108 C735 165,635 205,520 230" marker-end="url(#arrowRed)" />
+                    <path class="{active(pv_netz_flow)} feed-flow" d="M520 73 C650 48,735 48,815 73" marker-end="url(#arrowOrange)" />
                 </svg>
 
                 <div class="node pv-node" onclick="showEnergyView('pv')">
@@ -2368,13 +2356,13 @@ def render_energy_html():
                     <div class="small">Haus {netz_haus_flow:.1f} / Auto {netz_auto_flow:.1f} kWh</div>
                 </div>
 
-                <div class="flow-label label-pv-house {hidden(pv_haus_kw)}">PV → Haus: {pv_haus_kw:.1f} kW</div>
-                <div class="flow-label label-pv-battery {hidden(pv_akku_kw)}">PV → Akku: {pv_akku_kw:.1f} kW</div>
-                <div class="flow-label label-akku-house {hidden(akku_haus_kw)}">Akku → Haus: {akku_haus_kw:.1f} kW</div>
-                <div class="flow-label label-pv-car {hidden(pv_auto_kw)}">PV → Auto: {pv_auto_kw:.1f} kW</div>
-                <div class="flow-label label-grid {hidden(netz_auto_kw)}">Netz → Auto: {netz_auto_kw:.1f} kW</div>
-                <div class="flow-label label-grid-house {hidden(netz_haus_kw)}">Netz → Haus: {netz_haus_kw:.1f} kW</div>
-                <div class="flow-label label-feed {hidden(pv_netz_kw)}">PV → Netz: {pv_netz_kw:.1f} kW</div>
+                <div class="flow-label label-pv-house {hidden(pv_haus_flow)}">PV → Haus: {pv_haus_flow:.1f} kWh</div>
+                <div class="flow-label label-pv-battery {hidden(pv_akku_flow)}">PV → Akku: {pv_akku_flow:.1f} kWh</div>
+                <div class="flow-label label-akku-house {hidden(akku_haus_flow)}">Akku → Haus: {akku_haus_flow:.1f} kWh</div>
+                <div class="flow-label label-pv-car {hidden(pv_auto_flow)}">PV → Auto: {pv_auto_flow:.1f} kWh</div>
+                <div class="flow-label label-grid {hidden(netz_auto_flow)}">Netz → Auto: {netz_auto_flow:.1f} kWh</div>
+                <div class="flow-label label-grid-house {hidden(netz_haus_flow)}">Netz → Haus: {netz_haus_flow:.1f} kWh</div>
+                <div class="flow-label label-feed {hidden(pv_netz_flow)}">PV → Netz: {pv_netz_flow:.1f} kWh</div>
             </div>
 
             <div class="kpis">
